@@ -34,7 +34,9 @@ public class SqsService {
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, Instant>> deduplicationCache = new ConcurrentHashMap<>();
     private final AtomicLong sequenceCounter = new AtomicLong(0);
 
-    private record RedrivePolicy(int maxReceiveCount, String deadLetterTargetArn) {}
+    private record RedrivePolicy(int maxReceiveCount, String deadLetterTargetArn) {
+    }
+
     private final int defaultVisibilityTimeout;
     private final int maxMessageSize;
     private final String baseUrl;
@@ -339,7 +341,7 @@ public class SqsService {
             // Resolve deduplication ID
             String dedupId = messageDeduplicationId;
             if (dedupId == null || dedupId.isEmpty()) {
-                if ("true" .equalsIgnoreCase(queue.getAttributes().get("ContentBasedDeduplication"))) {
+                if ("true".equalsIgnoreCase(queue.getAttributes().get("ContentBasedDeduplication"))) {
                     dedupId = computeMd5(body);
                 } else {
                     throw new AwsException("InvalidParameterValue",
@@ -376,8 +378,8 @@ public class SqsService {
             messagesByQueue.computeIfAbsent(storageKey, k -> new ConcurrentLinkedDeque<>()).add(message);
             persistMessages(storageKey);
             notifyReceivers(storageKey);
-            LOG.debugv("Sent FIFO message {0} to queue {1}, group={2}, seq={3}",
-                    message.getMessageId(), queueUrl, messageGroupId, message.getSequenceNumber());
+            LOG.infov("Sent FIFO message {0} to queue {1}, group={2}, seq={3}, body={4}",
+                    message.getMessageId(), queueUrl, messageGroupId, message.getSequenceNumber(), message.getBody());
             return message;
         }
 
@@ -480,8 +482,8 @@ public class SqsService {
             try {
                 var rp = new com.fasterxml.jackson.databind.ObjectMapper().readTree(rawPolicy);
                 return new RedrivePolicy(
-                    rp.has("maxReceiveCount") ? rp.get("maxReceiveCount").asInt() : -1,
-                    rp.has("deadLetterTargetArn") ? rp.get("deadLetterTargetArn").asText() : null
+                        rp.has("maxReceiveCount") ? rp.get("maxReceiveCount").asInt() : -1,
+                        rp.has("deadLetterTargetArn") ? rp.get("deadLetterTargetArn").asText() : null
                 );
             } catch (Exception e) {
                 LOG.warnv("Failed to parse RedrivePolicy for queue {0}", queue.getQueueUrl());
@@ -639,6 +641,7 @@ public class SqsService {
         for (Message msg : messages) {
             if (receiptHandle.equals(msg.getReceiptHandle())) {
                 msg.setVisibleAt(Instant.now().plusSeconds(visibilityTimeout));
+                LOG.debugv("Changed visibility of message {0} to {1} seconds", msg.getMessageId(), visibilityTimeout);
                 return;
             }
         }

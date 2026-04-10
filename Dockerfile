@@ -13,6 +13,7 @@ RUN mvn clean package -DskipTests -q
 # Stage 2: Runtime
 FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
+RUN apk add --no-cache aws-cli
 
 COPY --from=build /build/target/quarkus-app/ quarkus-app/
 

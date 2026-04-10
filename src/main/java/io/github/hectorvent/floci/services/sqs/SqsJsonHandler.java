@@ -2,6 +2,7 @@ package io.github.hectorvent.floci.services.sqs;
 
 import io.github.hectorvent.floci.core.common.AwsErrorResponse;
 import io.github.hectorvent.floci.core.common.AwsException;
+import io.github.hectorvent.floci.core.common.AwsJsonController;
 import io.github.hectorvent.floci.services.sqs.model.Message;
 import io.github.hectorvent.floci.services.sqs.model.MessageAttributeValue;
 import io.github.hectorvent.floci.services.sqs.model.Queue;
@@ -19,6 +20,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.jboss.logging.Logger;
+
 /**
  * SQS JSON protocol handler (application/x-amz-json-1.0).
  * Called by the DynamoDB controller's JSON 1.0 endpoint for SQS-targeted requests.
@@ -28,6 +31,7 @@ public class SqsJsonHandler {
 
     private final SqsService sqsService;
     private final ObjectMapper objectMapper;
+    private static final Logger LOG = Logger.getLogger(SqsJsonHandler.class);
 
     @Inject
     public SqsJsonHandler(SqsService sqsService, ObjectMapper objectMapper) {
@@ -172,6 +176,8 @@ public class SqsJsonHandler {
 
         List<Message> messages = sqsService.receiveMessage(queueUrl, maxMessages,
                 visibilityTimeout, waitTimeSeconds, region);
+        LOG.infov("Received messages {0} from queue {1})",
+                messages.stream().map(message -> "(mId=%s;r=%s)".formatted(message.getMessageId(), message.getReceiptHandle())).toList(), queueUrl);
 
         ObjectNode response = objectMapper.createObjectNode();
         ArrayNode messagesArray = response.putArray("Messages");

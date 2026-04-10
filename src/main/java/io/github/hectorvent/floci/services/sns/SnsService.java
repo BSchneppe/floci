@@ -594,7 +594,6 @@ public class SnsService {
                             ? toSqsMessageAttributes(messageAttributes)
                             : Collections.emptyMap();
                     sqsService.sendMessage(queueUrl, body, 0, messageGroupId, messageDeduplicationId, sqsAttributes, region);
-                    LOG.debugv("Delivered SNS message to SQS: {0} ({1}) raw={2}", sub.getEndpoint(), queueUrl, rawDelivery);
                 }
                 case "lambda" -> {
                     String fnName = extractFunctionName(sub.getEndpoint());
